@@ -21,6 +21,7 @@ A task execution becomes a **base sequence** like `XEEVXEV` — a compact finger
 This toolkit provides:
 - **Classifier**: Map tool calls → XEPV base types (stateful, context-aware)
 - **Analyzer**: N-gram patterns, transition matrices, positional effects, risk profiles
+- **Governor**: Three-layer adaptive intervention system (rule engine + statistics + self-adaptation)
 - **Adapters**: Ready-made integrations for SWE-agent and DunCrew trace formats
 - **CLI**: One-command analysis from terminal
 
@@ -51,7 +52,7 @@ pip install base-sequence-toolkit[dev]
 Or install from source:
 
 ```bash
-git clone https://github.com/user/base-sequence-toolkit.git
+git clone https://github.com/FatBy/base-sequence-toolkit.git
 cd base-sequence-toolkit
 pip install -e ".[dev,swe-agent]"
 ```
@@ -137,6 +138,106 @@ for p in patterns[:5]:
     print(f"  {p.pattern}: lift={p.lift:.2f}")
 ```
 
+## Governor: Adaptive Intervention System
+
+The Governor is a three-layer closed-loop regulator that monitors agent execution in real-time and injects corrective prompts when behavioral anti-patterns are detected. **Zero LLM dependency** — pure rule-based logic.
+
+### Architecture
+
+| Layer | Name | Function | Latency |
+|-------|------|----------|---------|
+| **Layer 1** | Online Rule Engine | 7 rules + 8-dim feature vector → prompt injection | 0ms |
+| **Layer 2** | Statistical Accumulator | 72-bucket success tracking + A/B intervention records | O(1) |
+| **Layer 3** | Threshold Self-Adaptation | Chi-squared test → auto-adjust rule thresholds | Periodic |
+
+### 7 Built-in Rules
+
+| Rule | Description |
+|------|-------------|
+| `consecutive_x_brake` | Stops exploration spirals (XXX...) |
+| `step_length_fuse` | Step budget guard (disabled in v4 — data showed >15 steps = 97.4% success) |
+| `switch_rate_warning` | Detects erratic strategy switching |
+| `diversity_collapse` | Catches strategy entropy collapse (all same type) |
+| `late_planning_warning` | Penalizes re-planning past halfway |
+| `missing_verification` | Enforces P→V golden path (96.9% success rate) |
+| `explore_dominance` | Flags excessive X/(X+E) ratio |
+
+### 8-Dimensional Feature Vector
+
+```
+consecutive_x      — trailing consecutive X count
+step_count         — total steps so far
+x_ratio_last5      — X ratio in last 5 steps
+switch_rate        — adjacent-different-base ratio
+p_in_late_half     — P appears in second half
+last_p_followed_by_v — most recent P followed by V
+max_e_run_length   — longest consecutive E run
+xe_ratio           — X / (X + E)
+```
+
+### Quick Start: Real-time Monitoring
+
+```python
+from base_sequence_toolkit import BaseSequenceGovernor, InterventionRecord
+
+governor = BaseSequenceGovernor()
+
+# Layer 1: Evaluate during execution (after each tool call)
+bases = ["X", "E", "E", "X", "X", "X", "X"]
+signal = governor.evaluate(bases)
+
+if signal.triggered:
+    print(f"Rules fired: {signal.triggered_rules}")
+    print(f"Inject into LLM: {signal.prompt_injection}")
+    # → inject signal.prompt_injection into LLM system prompt
+
+# Access 8-dim features
+print(f"Consecutive X: {signal.features.consecutive_x}")
+print(f"XE ratio: {signal.features.xe_ratio}")
+```
+
+### Quick Start: Post-Execution Learning
+
+```python
+# Layer 2+3: After task completes, record outcome
+adjustments = governor.record_trace(
+    base_sequence="X-E-E-X-X-X-X",
+    success=False,
+    interventions=[
+        InterventionRecord(
+            rule="consecutive_x_brake",
+            step_index=5,
+            features=signal.features,
+        )
+    ],
+)
+
+# Layer 3 auto-adapts thresholds when enough data accumulates
+if adjustments:
+    print(f"Threshold adjustments: {adjustments}")
+
+# View statistics
+summary = governor.get_stats_summary()
+print(f"Total traces: {summary['total_traces']}")
+print(f"Buckets: {summary['bucket_count']}")
+```
+
+### Standalone Functions
+
+```python
+from base_sequence_toolkit import extract_features, evaluate_sequence, RuleThresholds
+
+# Extract features without full Governor
+features = extract_features(["X", "E", "V", "E", "X"])
+print(f"Switch rate: {features.switch_rate}")
+print(f"XE ratio: {features.xe_ratio}")
+
+# Evaluate with custom thresholds
+custom = RuleThresholds(consecutive_x_brake=3, switch_rate_warning=0.5)
+signal = evaluate_sequence(["X", "X", "X", "X"], thresholds=custom)
+print(f"Triggered: {signal.triggered_rules}")
+```
+
 ## CLI Usage
 
 ```bash
@@ -184,7 +285,8 @@ base-sequence-toolkit/
 │   ├── cli.py                    # CLI entry point
 │   ├── core/
 │   │   ├── classifier.py         # Generic XEPV classifier
-│   │   └── analyzer.py           # Analysis primitives
+│   │   ├── analyzer.py           # Analysis primitives
+│   │   └── governor.py           # Three-layer adaptive Governor
 │   └── adapters/
 │       ├── swe_agent.py          # SWE-agent trajectory adapter
 │       └── duncrew.py            # DunCrew trace adapter
@@ -193,6 +295,7 @@ base-sequence-toolkit/
 ├── tests/
 │   ├── test_classifier.py
 │   ├── test_analyzer.py
+│   ├── test_governor.py
 │   └── test_swe_agent.py
 ├── data/                         # Pre-computed results (optional)
 ├── pyproject.toml
