@@ -6,6 +6,8 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Paper](https://img.shields.io/badge/Paper-Your%20Agent%20Has%20a%20Genome-orange.svg)](#citation)
 
+**[English](README_EN.md) | [中文](README.md)**
+
 ---
 
 ## 一句话介绍
