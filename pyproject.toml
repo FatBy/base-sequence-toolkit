@@ -3,16 +3,16 @@ requires = ["setuptools>=68.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "base-sequence-toolkit"
+name = "llm-smart-water"
 version = "0.2.0"
-description = "XEPV Base Sequence Analysis Toolkit for AI Agent Execution Traces"
+description = "LLM-Smart-Water: XEPV Behavioral Sequence Analysis Framework for AI Agent Execution Traces"
 readme = "README.md"
 license = {text = "MIT"}
 requires-python = ">=3.10"
 authors = [
-    {name = "DunCrew Team"},
+    {name = "Sidi Deng"},
 ]
-keywords = ["ai-agent", "execution-trace", "base-sequence", "xepv", "swe-bench"]
+keywords = ["ai-agent", "execution-trace", "base-sequence", "xepv", "swe-bench", "llm", "agent-governance", "behavioral-analysis"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Science/Research",
@@ -31,6 +31,7 @@ dev = ["pytest>=7.0", "ruff>=0.1"]
 [project.urls]
 Homepage = "https://github.com/FatBy/base-sequence-toolkit"
 Documentation = "https://github.com/FatBy/base-sequence-toolkit#readme"
+Paper = "https://github.com/FatBy/base-sequence-toolkit#citation"
 
 [project.scripts]
 bst-analyze = "base_sequence_toolkit.cli:main"
